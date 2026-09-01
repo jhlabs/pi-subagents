@@ -77,7 +77,7 @@ import { clearStructuredOutputCaptures, MISSING_STRUCTURED_OUTPUT_CALL_ERROR, re
 import { formatMidToolExitError, formatProcessSignalError, isOrdinaryToolForMidToolExit, isUnexplainedProcessSignal } from "../shared/process-signal.ts";
 import { readChildToolDiagnosticError } from "../shared/tool-availability.ts";
 import { buildTimeoutRecoverySummary, collectTrackedMutationEvidence, snapshotTrackedMutations } from "../shared/mutation-evidence.ts";
-import { captureSingleOutputSnapshot, extractChildWrittenOutput, finalizeSingleOutput, formatSavedOutputReference, hasSingleOutputChangedSinceSnapshot, injectOutputPathSystemPrompt, resolveSingleOutput, validateFileOnlyOutputMode, type SingleOutputSnapshot } from "../shared/single-output.ts";
+import { captureSingleOutputSnapshot, extractChildWrittenOutput, finalizeSingleOutput, formatSavedOutputReference, hasSingleOutputChangedSinceSnapshot, injectOutputPathSystemPrompt, inspectRegisteredOutputAfterRun, resolveSingleOutput, validateFileOnlyOutputMode, type SingleOutputSnapshot } from "../shared/single-output.ts";
 import {
 	buildModelCandidates,
 	formatSubagentModelVerificationError,
@@ -1601,6 +1601,7 @@ async function runSingleAttempt(
 			termination: "timed-out",
 			evidence: mutationEvidence,
 			requiredOutputMissing,
+			outputInspection: inspectRegisteredOutputAfterRun(options.outputPath, shared.outputSnapshot),
 			currentTool: progress.currentTool,
 			currentToolArgs: progress.currentToolArgs,
 			currentPath: progress.currentPath,

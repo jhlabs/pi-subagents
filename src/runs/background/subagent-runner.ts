@@ -15,7 +15,7 @@ import { closeSteerInbox, consumeInterruptRequest, consumeSteerRequests, deliver
 import { appendJsonl as appendRawJsonl, formatOutputArtifactContent, getArtifactPaths, writeArtifact, writeMetadata } from "../../shared/artifacts.ts";
 import { PI_CODING_AGENT_PACKAGE, getPiSpawnCommand, resolveInstalledPiPackageRoot } from "../shared/pi-spawn.ts";
 import { preflightLaunchCwd } from "../shared/launch-cwd.ts";
-import { captureSingleOutputSnapshot, extractChildWrittenOutput, finalizeSingleOutput, formatSavedOutputReference, injectOutputPathSystemPrompt, injectSingleOutputInstruction, resolveSingleOutput, type SingleOutputSnapshot } from "../shared/single-output.ts";
+import { captureSingleOutputSnapshot, extractChildWrittenOutput, finalizeSingleOutput, formatSavedOutputReference, injectOutputPathSystemPrompt, injectSingleOutputInstruction, inspectRegisteredOutputAfterRun, resolveSingleOutput, type SingleOutputSnapshot } from "../shared/single-output.ts";
 import {
 	type ActivityState,
 	type ArtifactConfig,
@@ -2131,6 +2131,7 @@ async function runSingleStepInner(
 			termination: "timed-out",
 			evidence: finalMutationEvidence,
 			requiredOutputMissing: finalRequiredOutputMissing,
+			outputInspection: inspectRegisteredOutputAfterRun(step.outputPath, finalOutputSnapshot),
 			currentTool: finalResult?.currentTool,
 			currentToolArgs: finalResult?.currentToolArgs,
 			currentPath: finalResult?.currentPath,

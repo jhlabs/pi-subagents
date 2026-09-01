@@ -8196,6 +8196,28 @@ describe("single sync execution", { skip: !available ? "pi packages not availabl
 		assert.equal(fs.readFileSync(reportPath, "utf-8"), "stale report\n");
 	});
 
+	it("reports usable partial file-only output after a foreground timeout", async () => {
+		const reportPath = path.join(tempDir, "partial-report.md");
+		mockPi.onCall({
+			writeFiles: [{ path: "partial-report.md", content: "usable partial report\n" }],
+			steps: [{ delay: 10_000 }],
+		});
+
+		const result = await runSync(tempDir, makeAgentConfigs(["slow"]), "slow", "Slow task", {
+			timeoutMs: 1000,
+			outputPath: reportPath,
+			outputMode: "file-only",
+			acceptance: false,
+		});
+
+		assert.equal(result.timedOut, true);
+		assert.equal(result.timeoutRecovery?.reportStatus, "written");
+		assert.equal(result.timeoutRecovery?.outputClassification, "usable-partial-output");
+		assert.deepEqual(result.timeoutRecovery?.outputInspection, { status: "usable-partial", size: 22 });
+		assert.match(result.finalOutput ?? "", /usable partial output/i);
+		assert.equal(fs.readFileSync(reportPath, "utf-8"), "usable partial report\n");
+	});
+
 	it("ignores legacy turn-budget options without prompt injection or termination", async () => {
 		mockPi.onCall({
 			jsonl: [

@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { buildTimeoutRecoverySummary, collectTrackedMutationEvidence, snapshotTrackedMutations } from "../../src/runs/shared/mutation-evidence.ts";
+import { buildTimeoutRecoverySummary, collectTrackedMutationEvidence, formatTimeoutRecoveryLines, snapshotTrackedMutations } from "../../src/runs/shared/mutation-evidence.ts";
 import { evaluateCompletionMutationGuard } from "../../src/runs/shared/completion-guard.ts";
 
 function git(cwd: string, args: string[]): void {
@@ -137,6 +137,7 @@ describe("tracked mutation evidence", () => {
 				changedFiles: ["tracked.txt"],
 				attemptedMutation: true,
 			},
+			outputInspection: { status: "usable-partial", size: 128 },
 			currentTool: "edit",
 			currentPath: "tracked.txt",
 			sessionFile: "session.jsonl",
@@ -145,6 +146,10 @@ describe("tracked mutation evidence", () => {
 		assert.deepEqual(summary.changedFiles, ["tracked.txt"]);
 		assert.match(summary.message, /termination: timed-out/);
 		assert.match(summary.message, /changed tracked files: tracked\.txt/);
+		assert.equal(summary.outputClassification, "usable-partial-output");
+		assert.deepEqual(summary.outputInspection, { status: "usable-partial", size: 128 });
+		assert.match(summary.message, /registered output: usable-partial \(128 bytes\)/);
+		assert.match(formatTimeoutRecoveryLines(summary).join("\n"), /Usable partial output/);
 		assert.match(summary.message, /active tool: edit/);
 	});
 

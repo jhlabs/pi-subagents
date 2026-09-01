@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Message } from "@earendil-works/pi-ai";
-import type { OutputMode, SavedOutputReference } from "../../shared/types.ts";
+import type { OutputMode, RegisteredOutputInspection, SavedOutputReference } from "../../shared/types.ts";
 import { hasMutationToolCapability } from "./completion-guard.ts";
 
 export interface SingleOutputSnapshot {
@@ -222,6 +222,34 @@ export function hasSingleOutputChangedSinceSnapshot(
 	if (!outputPath) return undefined;
 	const inspected = inspectSingleOutputChange(outputPath, beforeRun);
 	return inspected.error ? undefined : inspected.changed;
+}
+
+export function inspectRegisteredOutputAfterRun(
+	outputPath: string | undefined,
+	beforeRun: SingleOutputSnapshot | undefined,
+): RegisteredOutputInspection | undefined {
+	if (!outputPath) return undefined;
+	if (beforeRun?.error) return { status: "unreadable", error: beforeRun.error };
+	try {
+		const stat = fs.statSync(outputPath);
+		if (!stat.isFile()) return { status: "unreadable", size: stat.size, error: "Registered output is not a regular file." };
+		const changed = inspectSingleOutputChange(outputPath, beforeRun);
+		if (changed.error) return { status: "unreadable", size: stat.size, error: changed.error };
+		if (!changed.changed) return { status: "unchanged", size: stat.size };
+		if (stat.size === 0) return { status: "empty", size: 0 };
+		const descriptor = fs.openSync(outputPath, "r");
+		try {
+			const byte = Buffer.allocUnsafe(1);
+			if (fs.readSync(descriptor, byte, 0, 1, 0) !== 1)
+				return { status: "unreadable", size: stat.size, error: "Registered output could not be read." };
+		} finally {
+			fs.closeSync(descriptor);
+		}
+		return { status: "usable-partial", size: stat.size };
+	} catch (error) {
+		if (missingFileStatError(error)) return { status: "missing" };
+		return { status: "unreadable", error: error instanceof Error ? error.message : String(error) };
+	}
 }
 
 function persistSingleOutput(
