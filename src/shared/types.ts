@@ -586,6 +586,13 @@ export interface TrackedMutationEvidence {
 	unavailable?: string;
 }
 
+export type RegisteredOutputInspection =
+	| { status: "missing" }
+	| { status: "unreadable"; size?: number; error: string }
+	| { status: "empty"; size: 0 }
+	| { status: "unchanged"; size: number }
+	| { status: "usable-partial"; size: number };
+
 export interface TimeoutRecoverySummary {
 	termination: "timed-out" | "stopped";
 	changedFiles: string[];
@@ -594,6 +601,8 @@ export interface TimeoutRecoverySummary {
 	recoveryNeeded?: boolean;
 	reason?: "timed-out-with-dirty-worktree";
 	reportStatus?: "missing" | "written" | "not-requested" | "unknown";
+	outputClassification?: "no-usable-output" | "usable-partial-output";
+	outputInspection?: RegisteredOutputInspection;
 	currentTool?: string;
 	currentToolArgs?: string;
 	currentPath?: string;
@@ -605,7 +614,17 @@ export interface TimeoutRecoverySummary {
 }
 
 /** Safe parent-facing subset of a timeout recovery summary. */
-export type TimeoutRecoveryProjection = Pick<TimeoutRecoverySummary, "termination" | "changedFiles" | "truncated" | "recoveryNeeded" | "reason" | "reportStatus">;
+export type TimeoutRecoveryProjection = Pick<
+	TimeoutRecoverySummary,
+	| "termination"
+	| "changedFiles"
+	| "truncated"
+	| "recoveryNeeded"
+	| "reason"
+	| "reportStatus"
+	| "outputClassification"
+	| "outputInspection"
+>;
 
 export const SUBAGENT_LIFECYCLE_ARTIFACT_VERSION = 3;
 export type SubagentLifecycleArtifactVersion = typeof SUBAGENT_LIFECYCLE_ARTIFACT_VERSION;

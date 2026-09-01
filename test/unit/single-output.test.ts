@@ -11,6 +11,7 @@ import {
 	formatSavedOutputReference,
 	injectOutputPathSystemPrompt,
 	injectSingleOutputInstruction,
+	inspectRegisteredOutputAfterRun,
 	normalizeSingleOutputOverride,
 	requestedOutputPathFromTask,
 	resolveSingleOutput,
@@ -181,6 +182,41 @@ describe("resolveSingleOutput", () => {
 		assert.equal(result.savedPath, undefined);
 		assert.match(result.saveError ?? "", /Failed to inspect output file: permission denied/);
 		assert.equal(fs.existsSync(outputPath), false);
+	});
+});
+
+describe("inspectRegisteredOutputAfterRun", () => {
+	it("classifies registered output without reading its full content", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagents-output-inspection-"));
+		tempDirs.push(dir);
+		const outputPath = path.join(dir, "report.md");
+		const missingSnapshot = captureSingleOutputSnapshot(outputPath);
+
+		assert.deepEqual(inspectRegisteredOutputAfterRun(outputPath, missingSnapshot), { status: "missing" });
+		fs.writeFileSync(outputPath, "", "utf-8");
+		assert.deepEqual(inspectRegisteredOutputAfterRun(outputPath, missingSnapshot), { status: "empty", size: 0 });
+		fs.writeFileSync(outputPath, "partial report", "utf-8");
+		assert.deepEqual(inspectRegisteredOutputAfterRun(outputPath, missingSnapshot), { status: "usable-partial", size: 14 });
+
+		const unchangedSnapshot = captureSingleOutputSnapshot(outputPath);
+		assert.deepEqual(inspectRegisteredOutputAfterRun(outputPath, unchangedSnapshot), { status: "unchanged", size: 14 });
+	});
+
+	it("classifies non-file and failed pre-run inspections as unreadable", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagents-output-inspection-"));
+		tempDirs.push(dir);
+		const outputPath = path.join(dir, "report.md");
+		fs.mkdirSync(outputPath);
+
+		assert.deepEqual(inspectRegisteredOutputAfterRun(outputPath, { exists: false }), {
+			status: "unreadable",
+			size: fs.statSync(outputPath).size,
+			error: "Registered output is not a regular file.",
+		});
+		assert.deepEqual(inspectRegisteredOutputAfterRun(outputPath, { exists: false, error: "permission denied" }), {
+			status: "unreadable",
+			error: "permission denied",
+		});
 	});
 });
 
